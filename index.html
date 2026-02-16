@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>Year Tracker Grid</title>
+  <title>Year Tracker Grid (Square)</title>
   <style>
     :root{
       --border: #cfcfcf;
@@ -17,78 +17,86 @@
       --today-outline: #111;
       --font: system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, sans-serif;
 
-      /* tweak these if you want bigger/smaller cells */
-      --gap: 4px;
-      --label-col: 44px; /* row label width */
-      --header-h: 26px;  /* month header height */
+      /* Compact layout knobs */
+      --gap: 2px;
+      --label-col: 34px; /* day label column */
+      --header-h: 20px;  /* month header row height */
+      --radius: 6px;
+      --bw: 1px;         /* border width */
     }
 
     body{
       margin: 0;
-      padding: 10px;
+      padding: 8px;
       font-family: var(--font);
       background: transparent;
+      box-sizing: border-box;
     }
 
-    /* Make it fit nicely in an iframe / CodiMD page */
-    .wrap{
-      width: 100%;
-      max-width: 100%;
+    /* Square widget container */
+    .square{
+      width: min(100%, 900px);   /* cap so it doesn't get huge on wide screens */
+      aspect-ratio: 1 / 1;
+      margin: 0 auto;
       box-sizing: border-box;
     }
 
     .grid{
       width: 100%;
+      height: 100%;
       display: grid;
       grid-template-columns: var(--label-col) repeat(12, 1fr);
+      grid-template-rows: var(--header-h) repeat(31, 1fr);
       gap: var(--gap);
       align-items: stretch;
       box-sizing: border-box;
     }
 
     .corner{
-      height: var(--header-h);
+      border-radius: var(--radius);
+      border: var(--bw) solid transparent;
     }
 
     .month{
-      height: var(--header-h);
       display: flex;
       align-items: center;
       justify-content: center;
       font-weight: 650;
-      border: 1px solid var(--border);
-      border-radius: 8px;
+      border: var(--bw) solid var(--border);
+      border-radius: var(--radius);
       background: #fff;
-      font-size: clamp(11px, 1.2vw, 14px);
+      font-size: clamp(10px, 1.1vw, 12px);
       user-select: none;
+      line-height: 1;
+      padding: 0 2px;
     }
 
     .daylabel{
       display: flex;
       align-items: center;
       justify-content: center;
-      border: 1px solid var(--border);
-      border-radius: 8px;
+      border: var(--bw) solid var(--border);
+      border-radius: var(--radius);
       background: #fff;
       font-variant-numeric: tabular-nums;
-      font-size: clamp(11px, 1.2vw, 14px);
+      font-size: clamp(10px, 1.1vw, 12px);
       user-select: none;
-      aspect-ratio: 1/1; /* keep row labels square-ish */
+      line-height: 1;
     }
 
     .cell{
-      border: 1px solid var(--border);
-      border-radius: 8px;
+      border: var(--bw) solid var(--border);
+      border-radius: var(--radius);
       background: var(--white);
       cursor: pointer;
-      aspect-ratio: 1/1; /* squares that scale with width */
       display: flex;
       align-items: center;
       justify-content: center;
-      font-size: clamp(10px, 1.1vw, 13px);
+      font-size: clamp(9px, 1vw, 11px);
       user-select: none;
       box-sizing: border-box;
       position: relative;
+      line-height: 1;
     }
 
     .cell.invalid{
@@ -104,63 +112,57 @@
 
     .cell.today{
       outline: 2px solid var(--today-outline);
-      outline-offset: 1px;
+      outline-offset: 0px;
     }
     .cell.today::after{
       content: "";
       position: absolute;
-      width: 6px;
-      height: 6px;
+      width: 5px;
+      height: 5px;
       border-radius: 50%;
-      right: 4px;
-      top: 4px;
+      right: 2px;
+      top: 2px;
       background: var(--today-outline);
       opacity: 0.65;
       pointer-events: none;
     }
 
-    /* “Week” separators: thicker border under day 7,14,21,28 (applied to whole row) */
+    /* Week separators (subtle): after days 7, 14, 21, 28 */
     .week-sep{
-      box-shadow: 0 3px 0 0 #00000014; /* subtle divider */
+      box-shadow: 0 2px 0 0 #00000014;
     }
 
-    /* Optional: reduce padding on very narrow screens */
     @media (max-width: 520px){
       body{ padding: 6px; }
-      :root{ --gap: 3px; --label-col: 38px; --header-h: 24px; }
+      :root{ --gap: 2px; --label-col: 30px; --header-h: 18px; --radius: 5px; }
     }
   </style>
 </head>
 
 <body>
-  <div class="wrap">
+  <div class="square">
     <div id="grid" class="grid" aria-label="Year tracker grid"></div>
   </div>
 
 <script>
 (() => {
-  // === Minimal settings ===
-  // Change this if you want a fixed year:
-  // const YEAR = 2026;
   const today = new Date();
   const YEAR = today.getFullYear();
 
-  const MONTHS = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
+  const MONTHS = ["J","F","M","A","M","J","J","A","S","O","N","D"]; // ultra-compact
   const COLORS = ["c0","c1","c2","c3"];
-  const STORAGE_KEY = `month_day_grid_v1_${YEAR}`;
+  const STORAGE_KEY = `month_day_grid_square_v1_${YEAR}`;
 
   const grid = document.getElementById("grid");
 
   function isLeapYear(y){
     return (y % 4 === 0 && y % 100 !== 0) || (y % 400 === 0);
   }
-
   const monthLen = [31, isLeapYear(YEAR) ? 29 : 28, 31,30,31,30,31,31,30,31,30,31];
 
   function pad2(n){ return String(n).padStart(2,"0"); }
-  function ymd(y,m,d){ return `${y}-${pad2(m)}-${pad2(d)}`; } // m=1..12, d=1..31
+  function ymd(y,m,d){ return `${y}-${pad2(m)}-${pad2(d)}`; }
 
-  // state: key "YYYY-MM-DD" -> 0..3
   let state = {};
   try{
     const raw = localStorage.getItem(STORAGE_KEY);
@@ -174,7 +176,7 @@
   function build(){
     grid.innerHTML = "";
 
-    // Corner (empty)
+    // Corner
     const corner = document.createElement("div");
     corner.className = "corner";
     grid.appendChild(corner);
@@ -188,14 +190,13 @@
       grid.appendChild(h);
     }
 
-    // Rows: day 1..31
     const todayKey = ymd(today.getFullYear(), today.getMonth()+1, today.getDate());
 
+    // Days 1..31
     for (let d = 1; d <= 31; d++){
       const dl = document.createElement("div");
       dl.className = "daylabel";
       dl.textContent = String(d);
-      dl.title = `Day ${d}`;
       if ([7,14,21,28].includes(d)) dl.classList.add("week-sep");
       grid.appendChild(dl);
 
@@ -206,7 +207,6 @@
         const valid = d <= monthLen[m-1];
         if (!valid){
           cell.classList.add("invalid");
-          cell.title = "Invalid date";
           if ([7,14,21,28].includes(d)) cell.classList.add("week-sep");
           grid.appendChild(cell);
           continue;
