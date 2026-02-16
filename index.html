@@ -1,0 +1,456 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Year Week Grid (7×Weeks) – Clickable</title>
+  <style>
+    :root{
+      --cell: 22px;
+      --gap: 4px;
+      --border: #cfcfcf;
+      --bg: #ffffff;
+      --invalid: #c9c9c9;
+      --white: #ffffff;
+      --green: #9be7a1;
+      --orange: #ffb86b;
+      --red: #ff6b6b;
+
+      --text: #222;
+      --muted: #666;
+
+      --today-outline: #111;
+      --today-bg: rgba(0,0,0,0.04);
+
+      --mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+      --sans: system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, sans-serif;
+    }
+
+    body{
+      margin: 16px;
+      font-family: var(--sans);
+      color: var(--text);
+      background: #fafafa;
+    }
+
+    h1{
+      font-size: 16px;
+      margin: 0 0 8px 0;
+      font-weight: 650;
+    }
+
+    .toolbar{
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+      align-items: center;
+      margin-bottom: 12px;
+    }
+
+    button{
+      border: 1px solid var(--border);
+      background: var(--bg);
+      padding: 6px 10px;
+      border-radius: 8px;
+      cursor: pointer;
+      font-weight: 600;
+    }
+    button:hover{ filter: brightness(0.98); }
+
+    .hint{
+      font-size: 12px;
+      color: var(--muted);
+    }
+
+    .grid-wrap{
+      overflow-x: auto;
+      padding: 8px;
+      background: #fff;
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      width: fit-content;
+      max-width: 100%;
+    }
+
+    .header-row{
+      display: grid;
+      grid-auto-flow: column;
+      align-items: center;
+      gap: var(--gap);
+      margin-bottom: var(--gap);
+      user-select: none;
+    }
+
+    .corner{
+      width: 70px;
+      font-size: 12px;
+      color: var(--muted);
+      text-align: right;
+      padding-right: 6px;
+      white-space: nowrap;
+    }
+
+    .week-label{
+      width: var(--cell);
+      height: var(--cell);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 10px;
+      color: var(--muted);
+      font-variant-numeric: tabular-nums;
+    }
+
+    .row{
+      display: grid;
+      grid-auto-flow: column;
+      align-items: center;
+      gap: var(--gap);
+      margin-bottom: var(--gap);
+    }
+
+    .dow-label{
+      width: 70px;
+      font-size: 12px;
+      text-align: right;
+      padding-right: 6px;
+      user-select: none;
+      white-space: nowrap;
+    }
+
+    .cell{
+      width: var(--cell);
+      height: var(--cell);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      background: var(--white);
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 10px;
+      font-variant-numeric: tabular-nums;
+      user-select: none;
+      transition: transform 0.03s ease, filter 0.08s ease;
+      position: relative;
+    }
+    .cell:active{ transform: scale(0.98); }
+
+    .cell.invalid{
+      background: var(--invalid);
+      cursor: not-allowed;
+      opacity: 0.9;
+    }
+
+    .cell.c0{ background: var(--white); }
+    .cell.c1{ background: var(--green); }
+    .cell.c2{ background: var(--orange); }
+    .cell.c3{ background: var(--red); }
+
+    .cell.today{
+      outline: 2px solid var(--today-outline);
+      outline-offset: 1px;
+      box-shadow: 0 0 0 2px rgba(255,255,255,0.6);
+    }
+    .cell.today::after{
+      content: "•";
+      position: absolute;
+      right: 3px;
+      top: -2px;
+      font-size: 14px;
+      line-height: 1;
+      color: var(--today-outline);
+      opacity: 0.7;
+      pointer-events: none;
+    }
+
+    .io{
+      display: grid;
+      gap: 6px;
+      margin-top: 10px;
+    }
+
+    textarea{
+      width: min(1100px, 100%);
+      height: 120px;
+      font-family: var(--mono);
+      font-size: 12px;
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 10px;
+      resize: vertical;
+    }
+  </style>
+</head>
+
+<body>
+  <h1>Clickable Year Grid (7 rows × ISO weeks)</h1>
+
+  <div class="toolbar">
+    <label class="hint">
+      Year:
+      <input id="year" type="number" value="2026" min="1900" max="2100"
+        style="width: 90px; padding: 6px 8px; border-radius: 8px; border: 1px solid var(--border);" />
+    </label>
+    <button id="applyYear">Apply year</button>
+    <button id="goToday">Go to current year</button>
+    <button id="reset">Reset</button>
+    <button id="export">Export JSON</button>
+    <button id="import">Import JSON</button>
+    <span class="hint">Click a day: white → green → orange → red → white. Grey = outside year.</span>
+  </div>
+
+  <div class="grid-wrap" id="gridWrap"></div>
+
+  <div class="io">
+    <textarea id="jsonBox" placeholder="Exported JSON appears here. Paste JSON here to import."></textarea>
+    <div class="hint">State auto-saves in localStorage.</div>
+  </div>
+
+<script>
+(() => {
+  const DOW = ["Mon","Tue","Wed","Thu","Fri","Sat","Sun"];
+  const COLORS = ["c0","c1","c2","c3"];
+  const STORAGE_KEY = "weekgrid_7xweeks_v1";
+
+  const gridWrap = document.getElementById("gridWrap");
+  const yearInput = document.getElementById("year");
+  const applyYearBtn = document.getElementById("applyYear");
+  const goTodayBtn = document.getElementById("goToday");
+  const resetBtn = document.getElementById("reset");
+  const exportBtn = document.getElementById("export");
+  const importBtn = document.getElementById("import");
+  const jsonBox = document.getElementById("jsonBox");
+
+  // state keyed by "YYYY-MM-DD" => 0..3
+  let state = {};
+  let year = Number(yearInput.value);
+
+  function pad2(n){ return String(n).padStart(2, "0"); }
+  function ymd(date){
+    const y = date.getFullYear();
+    const m = pad2(date.getMonth()+1);
+    const d = pad2(date.getDate());
+    return `${y}-${m}-${d}`;
+  }
+
+  function isoDay(date){
+    // JS: Sun=0..Sat=6 -> ISO: Mon=1..Sun=7
+    const d = date.getDay();
+    return d === 0 ? 7 : d;
+  }
+
+  function startOfISOWeekYear(y){
+    // ISO week-year starts on Monday of the week containing Jan 4
+    const jan4 = new Date(Date.UTC(y, 0, 4));
+    const day = isoDay(jan4); // 1..7
+    const monday = new Date(jan4);
+    monday.setUTCDate(jan4.getUTCDate() - (day - 1));
+    return monday;
+  }
+
+  function weeksInISOYear(y){
+    // ISO years have 52 or 53 weeks.
+    // Week count = ISO week of Dec 28 (always in last ISO week of the year).
+    const dec28 = new Date(Date.UTC(y, 11, 28));
+    return isoWeek(dec28).week;
+  }
+
+  function isoWeek(date){
+    // Returns {year: ISOweekYear, week: 1..53, day: 1..7}
+    const d = new Date(Date.UTC(date.getUTCFullYear(), date.getUTCMonth(), date.getUTCDate()));
+    // Thursday determines ISO week-year
+    const day = isoDay(d);
+    d.setUTCDate(d.getUTCDate() + (4 - day));
+    const isoYear = d.getUTCFullYear();
+
+    const yearStart = startOfISOWeekYear(isoYear);
+    const diffDays = Math.floor((d - yearStart) / 86400000);
+    const week = Math.floor(diffDays / 7) + 1;
+
+    return { year: isoYear, week, day };
+  }
+
+  function dateForISOWeekDay(isoYear, week, day){
+    // day: 1..7 (Mon..Sun)
+    const yearStart = startOfISOWeekYear(isoYear);
+    const dt = new Date(yearStart);
+    dt.setUTCDate(yearStart.getUTCDate() + (week - 1) * 7 + (day - 1));
+    return dt;
+  }
+
+  function save(){
+    localStorage.setItem(STORAGE_KEY, JSON.stringify({ year, state }));
+  }
+
+  function load(){
+    const raw = localStorage.getItem(STORAGE_KEY);
+    if (!raw) return false;
+    try{
+      const parsed = JSON.parse(raw);
+      if (!parsed || typeof parsed !== "object") return false;
+      const y = Number(parsed.year);
+      if (Number.isFinite(y)) {
+        year = y;
+        yearInput.value = String(y);
+      }
+      if (parsed.state && typeof parsed.state === "object") {
+        state = parsed.state;
+      } else {
+        state = {};
+      }
+      return true;
+    } catch {
+      return false;
+    }
+  }
+
+  function resetYearState(){
+    // Keep only entries for selected year (optional choice). Here we fully reset:
+    state = {};
+    save();
+  }
+
+  function render(){
+    gridWrap.innerHTML = "";
+
+    const weeks = weeksInISOYear(year); // 52 or 53
+    const todayLocal = new Date();
+    const todayStr = ymd(todayLocal);
+
+    // Header row (week numbers)
+    const header = document.createElement("div");
+    header.className = "header-row";
+    header.style.gridTemplateColumns = `70px repeat(${weeks}, var(--cell))`;
+
+    const corner = document.createElement("div");
+    corner.className = "corner";
+    corner.textContent = "Week →";
+    header.appendChild(corner);
+
+    for (let w = 1; w <= weeks; w++){
+      const wl = document.createElement("div");
+      wl.className = "week-label";
+      wl.title = `ISO week ${w}`;
+      // Show only every 2nd/5th label to reduce clutter; adjust as you like:
+      wl.textContent = (w % 2 === 0) ? String(w) : "";
+      header.appendChild(wl);
+    }
+    gridWrap.appendChild(header);
+
+    // Rows (Mon..Sun)
+    for (let r = 1; r <= 7; r++){
+      const row = document.createElement("div");
+      row.className = "row";
+      row.style.gridTemplateColumns = `70px repeat(${weeks}, var(--cell))`;
+
+      const dl = document.createElement("div");
+      dl.className = "dow-label";
+      dl.textContent = DOW[r-1];
+      row.appendChild(dl);
+
+      for (let w = 1; w <= weeks; w++){
+        const dt = dateForISOWeekDay(year, w, r); // UTC date
+        const dtLocal = new Date(dt.getUTCFullYear(), dt.getUTCMonth(), dt.getUTCDate()); // local for display/ymd
+        const key = ymd(dtLocal);
+
+        const cell = document.createElement("div");
+        cell.classList.add("cell");
+
+        const inYear = (dtLocal.getFullYear() === year);
+        if (!inYear){
+          cell.classList.add("invalid");
+          cell.title = key + " (outside year)";
+          cell.textContent = "";
+        } else {
+          const v = Number.isInteger(state[key]) ? state[key] : 0;
+          cell.classList.add(COLORS[v]);
+          cell.title = key;
+          // If you want the day-of-month number in each cell:
+          // cell.textContent = String(dtLocal.getDate());
+          cell.textContent = "";
+
+          if (key === todayStr){
+            cell.classList.add("today");
+            cell.title = key + " (today)";
+          }
+
+          cell.addEventListener("click", () => {
+            const cur = Number.isInteger(state[key]) ? state[key] : 0;
+            const next = (cur + 1) % 4;
+            state[key] = next;
+            cell.classList.remove(...COLORS);
+            cell.classList.add(COLORS[next]);
+            save();
+          });
+        }
+
+        row.appendChild(cell);
+      }
+
+      gridWrap.appendChild(row);
+    }
+
+    // Optional: if today is in this year, scroll roughly to its week column
+    const todayIso = isoWeek(new Date(Date.UTC(todayLocal.getFullYear(), todayLocal.getMonth(), todayLocal.getDate())));
+    if (todayLocal.getFullYear() === year && todayIso.year === year){
+      const approxX = 70 + (todayIso.week - 1) * (parseInt(getComputedStyle(document.documentElement).getPropertyValue("--cell")) + 4);
+      gridWrap.parentElement.scrollLeft = Math.max(0, approxX - 200);
+    }
+  }
+
+  function applyYear(){
+    const y = Number(yearInput.value);
+    if (!Number.isFinite(y) || y < 1900 || y > 2100) return;
+    year = y;
+    save();
+    render();
+  }
+
+  applyYearBtn.addEventListener("click", applyYear);
+
+  goTodayBtn.addEventListener("click", () => {
+    const t = new Date();
+    yearInput.value = String(t.getFullYear());
+    applyYear();
+  });
+
+  resetBtn.addEventListener("click", () => {
+    resetYearState();
+    jsonBox.value = "";
+    render();
+  });
+
+  exportBtn.addEventListener("click", () => {
+    const payload = { year, state };
+    jsonBox.value = JSON.stringify(payload, null, 2);
+    jsonBox.focus();
+    jsonBox.select();
+  });
+
+  importBtn.addEventListener("click", () => {
+    try{
+      const parsed = JSON.parse(jsonBox.value);
+      const y = Number(parsed.year);
+      if (!Number.isFinite(y)) throw new Error("Missing/invalid year");
+      year = y;
+      yearInput.value = String(y);
+      state = (parsed.state && typeof parsed.state === "object") ? parsed.state : {};
+      save();
+      render();
+    } catch (e){
+      alert("Import failed: " + (e?.message || String(e)));
+    }
+  });
+
+  // Boot
+  if (!load()){
+    year = Number(yearInput.value);
+    state = {};
+    save();
+  }
+  render();
+})();
+</script>
+</body>
+</html>
