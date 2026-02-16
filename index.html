@@ -1,229 +1,223 @@
 <!doctype html>
 <html lang="en">
 <head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>Year Tracker Grid (Square)</title>
-  <style>
-    :root{
-      --border: #cfcfcf;
-      --invalid: #c9c9c9;
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>Year Tracker Grid</title>
 
-      --white: #ffffff;
-      --green: #9be7a1;
-      --orange: #ffb86b;
-      --red: #ff6b6b;
+<style>
+:root{
+  --border: #d0d0d0;
+  --invalid: #c9c9c9;
 
-      --today-outline: #111;
-      --font: system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, sans-serif;
+  --white: #ffffff;
+  --green: #9be7a1;
+  --orange: #ffb86b;
+  --red: #ff6b6b;
 
-      /* Compact layout knobs */
-      --gap: 2px;
-      --label-col: 34px; /* day label column */
-      --header-h: 20px;  /* month header row height */
-      --radius: 6px;
-      --bw: 1px;         /* border width */
-    }
+  --today-outline: #111;
+  --font: system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, sans-serif;
 
-    body{
-      margin: 0;
-      padding: 8px;
-      font-family: var(--font);
-      background: transparent;
-      box-sizing: border-box;
-    }
+  --gap: 2px;
+  --label-col: 36px;
+  --header-h: 26px;
+  --radius: 6px;
+  --bw: 1px;
+}
 
-    /* Square widget container */
-    .square{
-      width: min(100%, 900px);   /* cap so it doesn't get huge on wide screens */
-      aspect-ratio: 1 / 1;
-      margin: 0 auto;
-      box-sizing: border-box;
-    }
+body{
+  margin: 0;
+  padding: 8px;
+  font-family: var(--font);
+  background: transparent;
+  box-sizing: border-box;
+}
 
-    .grid{
-      width: 100%;
-      height: 100%;
-      display: grid;
-      grid-template-columns: var(--label-col) repeat(12, 1fr);
-      grid-template-rows: var(--header-h) repeat(31, 1fr);
-      gap: var(--gap);
-      align-items: stretch;
-      box-sizing: border-box;
-    }
+.square{
+  width: min(100%, 920px);
+  aspect-ratio: 1 / 1;
+  margin: 0 auto;
+}
 
-    .corner{
-      border-radius: var(--radius);
-      border: var(--bw) solid transparent;
-    }
+.grid{
+  width: 100%;
+  height: 100%;
+  display: grid;
+  grid-template-columns: var(--label-col) repeat(12, 1fr);
+  grid-template-rows: var(--header-h) repeat(31, 1fr);
+  gap: var(--gap);
+}
 
-    .month{
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      font-weight: 650;
-      border: var(--bw) solid var(--border);
-      border-radius: var(--radius);
-      background: #fff;
-      font-size: clamp(10px, 1.1vw, 12px);
-      user-select: none;
-      line-height: 1;
-      padding: 0 2px;
-    }
+.corner{ }
 
-    .daylabel{
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      border: var(--bw) solid var(--border);
-      border-radius: var(--radius);
-      background: #fff;
-      font-variant-numeric: tabular-nums;
-      font-size: clamp(10px, 1.1vw, 12px);
-      user-select: none;
-      line-height: 1;
-    }
+.month{
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  border: var(--bw) solid var(--border);
+  border-radius: var(--radius);
+  background:#fff;
+  font-weight:600;
+  font-size: clamp(10px, 1vw, 13px);
+  text-align:center;
+  padding:0 2px;
+  line-height:1.1;
+}
 
-    .cell{
-      border: var(--bw) solid var(--border);
-      border-radius: var(--radius);
-      background: var(--white);
-      cursor: pointer;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      font-size: clamp(9px, 1vw, 11px);
-      user-select: none;
-      box-sizing: border-box;
-      position: relative;
-      line-height: 1;
-    }
+.daylabel{
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  border: var(--bw) solid var(--border);
+  border-radius: var(--radius);
+  background:#fff;
+  font-size: clamp(10px, 1vw, 12px);
+  font-variant-numeric: tabular-nums;
+}
 
-    .cell.invalid{
-      background: var(--invalid);
-      cursor: not-allowed;
-      opacity: 0.9;
-    }
+.cell{
+  border: var(--bw) solid var(--border);
+  border-radius: var(--radius);
+  background: var(--white);
+  cursor:pointer;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  font-size: clamp(9px, 0.9vw, 11px);
+  box-sizing:border-box;
+  position:relative;
+}
 
-    .cell.c0{ background: var(--white); }
-    .cell.c1{ background: var(--green); }
-    .cell.c2{ background: var(--orange); }
-    .cell.c3{ background: var(--red); }
+.cell.invalid{
+  background: var(--invalid);
+  cursor:not-allowed;
+  opacity:0.9;
+}
 
-    .cell.today{
-      outline: 2px solid var(--today-outline);
-      outline-offset: 0px;
-    }
-    .cell.today::after{
-      content: "";
-      position: absolute;
-      width: 5px;
-      height: 5px;
-      border-radius: 50%;
-      right: 2px;
-      top: 2px;
-      background: var(--today-outline);
-      opacity: 0.65;
-      pointer-events: none;
-    }
+.cell.c0{ background: var(--white); }
+.cell.c1{ background: var(--green); }
+.cell.c2{ background: var(--orange); }
+.cell.c3{ background: var(--red); }
 
-    /* Week separators (subtle): after days 7, 14, 21, 28 */
-    .week-sep{
-      box-shadow: 0 2px 0 0 #00000014;
-    }
+.cell.today{
+  outline: 2px solid var(--today-outline);
+  outline-offset: 0;
+}
 
-    @media (max-width: 520px){
-      body{ padding: 6px; }
-      :root{ --gap: 2px; --label-col: 30px; --header-h: 18px; --radius: 5px; }
-    }
-  </style>
+.cell.today::after{
+  content:"";
+  position:absolute;
+  width:5px;
+  height:5px;
+  border-radius:50%;
+  top:2px;
+  right:2px;
+  background:var(--today-outline);
+  opacity:0.7;
+}
+
+.week-sep{
+  box-shadow: 0 2px 0 0 #00000018;
+}
+
+@media (max-width:520px){
+  :root{
+    --label-col:30px;
+    --header-h:22px;
+  }
+}
+</style>
 </head>
 
 <body>
-  <div class="square">
-    <div id="grid" class="grid" aria-label="Year tracker grid"></div>
-  </div>
+<div class="square">
+  <div id="grid" class="grid"></div>
+</div>
 
 <script>
 (() => {
   const today = new Date();
   const YEAR = today.getFullYear();
 
-  const MONTHS = ["J","F","M","A","M","J","J","A","S","O","N","D"]; // ultra-compact
+  const MONTHS = [
+    "January","February","March","April","May","June",
+    "July","August","September","October","November","December"
+  ];
+
   const COLORS = ["c0","c1","c2","c3"];
-  const STORAGE_KEY = `month_day_grid_square_v1_${YEAR}`;
+  const STORAGE_KEY = `tracker_square_fullmonths_${YEAR}`;
 
   const grid = document.getElementById("grid");
 
-  function isLeapYear(y){
-    return (y % 4 === 0 && y % 100 !== 0) || (y % 400 === 0);
+  function isLeap(y){
+    return (y%4===0 && y%100!==0) || (y%400===0);
   }
-  const monthLen = [31, isLeapYear(YEAR) ? 29 : 28, 31,30,31,30,31,31,30,31,30,31];
 
-  function pad2(n){ return String(n).padStart(2,"0"); }
-  function ymd(y,m,d){ return `${y}-${pad2(m)}-${pad2(d)}`; }
+  const monthLen = [
+    31, isLeap(YEAR)?29:28, 31,30,31,30,
+    31,31,30,31,30,31
+  ];
+
+  function pad(n){ return String(n).padStart(2,"0"); }
+  function key(y,m,d){ return `${y}-${pad(m)}-${pad(d)}`; }
 
   let state = {};
   try{
     const raw = localStorage.getItem(STORAGE_KEY);
-    if (raw) state = JSON.parse(raw) || {};
-  } catch { state = {}; }
+    if(raw) state = JSON.parse(raw) || {};
+  }catch{ state = {}; }
 
   function save(){
-    try{ localStorage.setItem(STORAGE_KEY, JSON.stringify(state)); } catch {}
+    try{ localStorage.setItem(STORAGE_KEY, JSON.stringify(state)); }catch{}
   }
 
   function build(){
-    grid.innerHTML = "";
+    grid.innerHTML="";
 
-    // Corner
-    const corner = document.createElement("div");
-    corner.className = "corner";
-    grid.appendChild(corner);
+    grid.appendChild(document.createElement("div")); // corner
 
-    // Month headers
-    for (let m = 1; m <= 12; m++){
-      const h = document.createElement("div");
-      h.className = "month";
-      h.textContent = MONTHS[m-1];
-      h.title = `${YEAR}-${pad2(m)}`;
+    for(let m=1;m<=12;m++){
+      const h=document.createElement("div");
+      h.className="month";
+      h.textContent=MONTHS[m-1];
       grid.appendChild(h);
     }
 
-    const todayKey = ymd(today.getFullYear(), today.getMonth()+1, today.getDate());
+    const todayKey = key(
+      today.getFullYear(),
+      today.getMonth()+1,
+      today.getDate()
+    );
 
-    // Days 1..31
-    for (let d = 1; d <= 31; d++){
-      const dl = document.createElement("div");
-      dl.className = "daylabel";
-      dl.textContent = String(d);
-      if ([7,14,21,28].includes(d)) dl.classList.add("week-sep");
+    for(let d=1; d<=31; d++){
+      const dl=document.createElement("div");
+      dl.className="daylabel";
+      dl.textContent=d;
+      if([7,14,21,28].includes(d)) dl.classList.add("week-sep");
       grid.appendChild(dl);
 
-      for (let m = 1; m <= 12; m++){
-        const cell = document.createElement("div");
+      for(let m=1;m<=12;m++){
+        const cell=document.createElement("div");
         cell.classList.add("cell");
 
-        const valid = d <= monthLen[m-1];
-        if (!valid){
+        if(d>monthLen[m-1]){
           cell.classList.add("invalid");
-          if ([7,14,21,28].includes(d)) cell.classList.add("week-sep");
+          if([7,14,21,28].includes(d)) cell.classList.add("week-sep");
           grid.appendChild(cell);
           continue;
         }
 
-        const key = ymd(YEAR, m, d);
-        const v = Number.isInteger(state[key]) ? state[key] : 0;
+        const k=key(YEAR,m,d);
+        const v=Number.isInteger(state[k])?state[k]:0;
         cell.classList.add(COLORS[v]);
-        cell.title = key;
 
-        if (key === todayKey) cell.classList.add("today");
-        if ([7,14,21,28].includes(d)) cell.classList.add("week-sep");
+        if(k===todayKey) cell.classList.add("today");
+        if([7,14,21,28].includes(d)) cell.classList.add("week-sep");
 
-        cell.addEventListener("click", () => {
-          const cur = Number.isInteger(state[key]) ? state[key] : 0;
-          const next = (cur + 1) % 4;
-          state[key] = next;
+        cell.addEventListener("click",()=>{
+          const cur=Number.isInteger(state[k])?state[k]:0;
+          const next=(cur+1)%4;
+          state[k]=next;
           cell.classList.remove(...COLORS);
           cell.classList.add(COLORS[next]);
           save();
